@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
-
+const authRoute = require('./routes/auth');
 
 
 dotenv.config();
@@ -14,6 +14,7 @@ mongoose.connect(process.env.MONGO_URI).then(() => console.log('DB Connected'))
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
+app.use('/', authRoute);
 
 app.use('/test', (req, res) => {
     res.status(200).json({message: "Welcome to metamatch app"});
