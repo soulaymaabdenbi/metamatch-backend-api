@@ -2,9 +2,17 @@ const User = require('../models/User');
 const CryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-
+const {validateEmail, validatePassword, encryptPassword} = require('../utils/helper');
+const {sendAccountCredentials} = require("../utils/smtp_function");
 module.exports = {
-    getUser: async (req, res) => {
+    getAllUsers: async (req, res) => {
+        try {
+            const users = await User.find({}, {__v: 0, password: 0});
+            res.status(200).json({status: true, users});
+        } catch (e) {
+            res.status(500).json({status: false, message: 'error getting users', error: e.message});
+        }
+    }, getUser: async (req, res) => {
         const userId = req.user.id;
 
         try {
@@ -53,5 +61,56 @@ module.exports = {
             res.status(500).json({status: false, message: 'error verifying account', error: e.message});
         }
 
+    }, updateUserByAdmin: async (req, res) => {
+        const userId = req.params.id;
+        const {username, email, password, address, phone, userType, profile} = req.body;
+
+        try {
+            const updates = {};
+
+            let emailChanged = false;
+            let passwordChanged = false;
+
+            if (email) {
+                if (!validateEmail(email)) {
+                    return res.status(400).json({status: false, message: "Invalid email address"});
+                }
+                updates.email = email;
+                emailChanged = true;
+            }
+
+            if (password) {
+                if (!validatePassword(password)) {
+                    return res.status(400).json({
+                        status: false,
+                        message: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character"
+                    });
+                }
+                updates.password = encryptPassword(password);
+                passwordChanged = true;
+            }
+
+            if (username) updates.username = username;
+            if (address) updates.address = address;
+            if (phone) updates.phone = phone;
+            if (userType) updates.userType = userType;
+            if (profile) updates.profile = profile;
+
+            const updatedUser = await User.findByIdAndUpdate(userId, updates, {new: true});
+            if (!updatedUser) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+
+            // Send an email if email or password has changed
+            if (emailChanged || passwordChanged) {
+                await sendAccountCredentials(updatedUser.email, username, password);
+            }
+
+            const {password: userPassword, ...updatedUserDetails} = updatedUser._doc;
+            res.status(200).json({status: true, message: "User updated successfully", user: updatedUserDetails});
+        } catch (error) {
+            res.status(500).json({status: false, message: 'Error updating user', error: error.message});
+        }
     }
 }
+

@@ -1,19 +1,24 @@
 const User = require('../models/User');
 const CryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
-
+const {validateEmail, validatePassword, encryptPassword, generateRandomPassword} = require('../utils/helper');
+const { sendAccountCredentials } = require("../utils/smtp_function");
 
 module.exports = {
     createUser: async (req, res) => {
-        const {username, email, password, address, phone, userType, profile} = req.body;
+        let {username, email, password, address, phone, userType, profile} = req.body;
+        console.log("before generate password : " + password)
 
-        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-        if (!emailRegex.test(email)) {
+        if (!password) {
+            password = generateRandomPassword();
+            console.log("after generate password : " + password)
+        }
+
+        if (!validateEmail(email)) {
             return res.status(400).json({status: false, message: "Invalid email address"});
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(password)) {
+        if (!validatePassword(password)) {
             return res.status(400).json({
                 status: false,
                 message: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character"
@@ -25,51 +30,52 @@ module.exports = {
             if (existingUser) {
                 return res.status(400).json({status: false, message: "User already exists"});
             }
-            const encryptedPassword = CryptoJS.AES.encrypt(password, process.env.SECRET_KEY).toString();
+            const encryptedPassword = encryptPassword(password);
 
             const newUser = new User({
                 username,
                 email,
                 password: encryptedPassword,
-                address: address,
+                address,
                 phone,
-                userType: userType,
+                userType,
                 profile: profile || "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png",
                 verification: false,
             });
 
             const savedUser = await newUser.save();
-
+            await sendAccountCredentials(email, username, password);
             res.status(201).json({status: true, message: "User created successfully", user: savedUser});
         } catch (error) {
             res.status(500).json({status: false, message: "Error creating user", error: error.message});
         }
     }, loginUser: async (req, res) => {
-        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-        if (!emailRegex.test(req.body.email)) {
+        const {email, password} = req.body;
+
+        if (!validateEmail(email)) {
             return res.status(400).json({status: false, message: "Invalid email address"});
         }
 
         try {
-            const user = await User.findOne({email: req.body.email}, {__v: 0, updatedAt: 0, createdAt: 0});
+            const user = await User.findOne({email: email}).select('-__v -updatedAt -createdAt');
             if (!user) {
-                return res.status(401).json({status: false, message: "Wrong email"});
+                return res.status(401).json({status: false, message: "Wrong email or password"}); // Use a generic message for security
             }
 
             const decryptedPassword = CryptoJS.AES.decrypt(user.password, process.env.SECRET_KEY).toString(CryptoJS.enc.Utf8);
-            if (decryptedPassword !== req.body.password) {
-                return res.status(401).json({status: false, message: "Wrong password"});
+            if (decryptedPassword !== password) {
+                return res.status(401).json({status: false, message: "Wrong email or password"}); // Use a generic message for security
             }
 
             const token = jwt.sign({
                 id: user._id, userType: user.userType, email: user.email
             }, process.env.JWT_SECRET, {expiresIn: "21d"});
 
-            const {password, email, ...others} = user._doc;
+            const {password: userPassword, ...userDetails} = user._doc;
 
-            res.status(200).json({...others, token});
-        } catch (e) {
-            res.status(500).json({status: false, message: e.message});
+            res.status(200).json({...userDetails, token});
+        } catch (error) {
+            res.status(500).json({status: false, message: error.message});
         }
     }
 }
