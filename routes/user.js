@@ -8,4 +8,5 @@ router.delete('/', verifyTokenAndAuthorization, userController.deleteUser);
 router.put('/', verifyTokenAndAuthorization, userController.updateUser);
 router.put('/updateUserByAdmin/:id', verifyAdmin, userController.updateUserByAdmin);
 router.get('/getAllUsers', verifyAdmin, userController.getAllUsers);
+router.get('/getUserById/:id', verifyAdmin, userController.getUserById);
 module.exports = router;

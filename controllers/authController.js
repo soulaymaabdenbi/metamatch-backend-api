@@ -6,7 +6,7 @@ const { sendAccountCredentials } = require("../utils/smtp_function");
 
 module.exports = {
     createUser: async (req, res) => {
-        let {username, email, password, address, phone, userType, profile} = req.body;
+        let {fullname, username, email, password, address, phone, role, profile} = req.body;
         console.log("before generate password : " + password)
 
         if (!password) {
@@ -33,12 +33,13 @@ module.exports = {
             const encryptedPassword = encryptPassword(password);
 
             const newUser = new User({
+                fullname,
                 username,
                 email,
                 password: encryptedPassword,
                 address,
                 phone,
-                userType,
+                role,
                 profile: profile || "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png",
                 verification: false,
             });
@@ -68,7 +69,7 @@ module.exports = {
             }
 
             const token = jwt.sign({
-                id: user._id, userType: user.userType, email: user.email
+                id: user._id, role: user.role, email: user.email
             }, process.env.JWT_SECRET, {expiresIn: "21d"});
 
             const {password: userPassword, ...userDetails} = user._doc;

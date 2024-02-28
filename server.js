@@ -3,7 +3,7 @@ const app = express();
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-
+const cors = require('cors');
 const authRoute = require('./routes/auth');
 const userRoute = require('./routes/user');
 const { generateRandomPassword, validatePassword } = require('./utils/helper');
@@ -14,8 +14,10 @@ dotenv.config();
 mongoose.connect(process.env.MONGO_URI).then(() => console.log('DB Connected'))
     .catch(err => console.log(err));
 
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(cors());
 app.use('/', authRoute);
 app.use('/api/users', userRoute);
 

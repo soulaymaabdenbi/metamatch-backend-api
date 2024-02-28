@@ -21,7 +21,7 @@ const verifyToken = (req, res, next) => {
 
 const verifyTokenAndAuthorization = (req, res, next) => {
     verifyToken(req, res, () => {
-        if (req.user.userType === "Player" || req.user.userType === "Admin" || req.user.userType === "Coach" || req.user.userType === "Physiotherapist") {
+        if (req.user.role === "Player" || req.user.role === "Admin" || req.user.role === "Coach" || req.user.role === "Physiotherapist") {
             next();
         } else {
             res.status(403).json({status: false, message: "You are not allowed to do that!"});
@@ -31,7 +31,7 @@ const verifyTokenAndAuthorization = (req, res, next) => {
 
 const verifyPlayer = (req, res, next) => {
     verifyToken(req, res, () => {
-        if (req.user.userType === "Player" || req.user.userType === "Admin") {
+        if (req.user.role === "Player" || req.user.role === "Admin") {
             next();
         } else {
             res.status(403).json({status: false, message: "You are not allowed to do that!"});
@@ -41,7 +41,7 @@ const verifyPlayer = (req, res, next) => {
 
 const verifyCoach = (req, res, next) => {
     verifyToken(req, res, () => {
-        if (req.user.userType === "Coach" || req.user.userType === "Admin") {
+        if (req.user.role === "Coach" || req.user.role === "Admin") {
             next();
         } else {
             res.status(403).json({status: false, message: "You are not allowed to do that!"});
@@ -51,7 +51,7 @@ const verifyCoach = (req, res, next) => {
 
 const verifyPhysiotherapist = (req, res, next) => {
     verifyToken(req, res, () => {
-        if (req.user.userType === "Physiotherapist" || req.user.userType === "Admin") {
+        if (req.user.role === "Physiotherapist" || req.user.role === "Admin") {
             next();
         } else {
             res.status(403).json({status: false, message: "You are not allowed to do that!"});
@@ -61,7 +61,7 @@ const verifyPhysiotherapist = (req, res, next) => {
 
 const verifyAdmin = (req, res, next) => {
     verifyToken(req, res, () => {
-        if (req.user.userType === "Admin") {
+        if (req.user.role === "Admin") {
             next();
         } else {
             res.status(403).json({status: false, message: "You are not allowed to do that!"});
