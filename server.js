@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const sessionRouter = require("./routes/sessions");
+const matchRouter = require("./routes/match");
 const corsMiddleware = require("./middlewares/cors");
 
 dotenv.config();
@@ -16,6 +17,7 @@ app.use(corsMiddleware);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/sessions", sessionRouter);
+app.use("/matches", matchRouter);
 
 app.use("/test", (req, res) => {
   res.status(200).json({ message: "Welcome to metamatch app" });
