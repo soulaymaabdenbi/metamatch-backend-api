@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const sessionRouter = require("./routes/sessions");
+const corsMiddleware = require("./middlewares/cors");
 
 dotenv.config();
 
@@ -11,7 +12,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("DB Connected"))
   .catch((err) => console.log(err));
-
+app.use(corsMiddleware);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/sessions", sessionRouter);
