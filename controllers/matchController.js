@@ -1,4 +1,64 @@
 const Match = require("../models/Match");
+const PDFParser = require("pdf-parse");
+const csvParser = require("csv-parser");
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+
+const fs = require("fs");
+
+const moment = require("moment");
+
+exports.uploadCSV = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const matches = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csvParser({ separator: ";" }))
+      .on("data", (data) => {
+        console.log("Row data:", data);
+
+        const date = data["date"] ? data["date"].trim() : null;
+        console.log("Date:", date);
+
+        if (!date || typeof date !== "string" || !date.trim()) {
+          console.error("Date column missing or empty in row:", data);
+          return;
+        }
+
+        const dateParts = date.split("/");
+        const day = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const year = parseInt(dateParts[2], 10);
+
+        const parsedDate = new Date(year, month, day);
+        console.log("Parsed date:", parsedDate);
+
+        if (isNaN(parsedDate.getTime())) {
+          throw new Error("Invalid date format");
+        }
+
+        const matchData = {
+          date: parsedDate,
+          teamA: data.TeamA,
+          teamB: data.TeamB,
+          location: data.location,
+        };
+        matches.push(matchData);
+      })
+      .on("end", async () => {
+        await Match.insertMany(matches);
+        res.json({
+          message: "CSV file uploaded and data inserted successfully",
+        });
+      });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Controller function to fetch all matches
 exports.getAllMatches = async (req, res) => {
@@ -14,15 +74,12 @@ exports.getAllMatches = async (req, res) => {
 exports.addMatch = async (req, res) => {
   const { date } = req.body;
   try {
-    // Check if there's already a match scheduled at the same date
     const existingMatch = await Match.findOne({ date });
     if (existingMatch) {
       return res.status(400).json({
         message: "A match is already scheduled on the same date",
       });
     }
-
-    // If no conflicting match found, create the new match
     const match = new Match(req.body);
     const newMatch = await match.save();
     res.status(201).json(newMatch);
@@ -60,6 +117,7 @@ exports.deleteMatch = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 // Controller function to get a match by ID
 exports.getMatchById = async (req, res) => {
   const { id } = req.params;
@@ -74,7 +132,7 @@ exports.getMatchById = async (req, res) => {
   }
 };
 
-//findBydate
+// Controller function to get matches by date
 exports.getByDate = async (req, res) => {
   const { date } = req.params;
   try {

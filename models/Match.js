@@ -2,11 +2,11 @@ const mongo = require("mongoose");
 const Schema = mongo.Schema;
 
 const Match = new Schema({
-  _id: { type: mongo.Schema.Types.ObjectId, auto: true },
+  //  id: String,
   date: Date,
   location: String,
-  scores: [Number],
-  teams: [String],
+  teamA: String,
+  teamB: String,
 });
 
 module.exports = mongo.model("match", Match);

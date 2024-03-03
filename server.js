@@ -6,6 +6,7 @@ const bodyParser = require("body-parser");
 const sessionRouter = require("./routes/sessions");
 const matchRouter = require("./routes/match");
 const corsMiddleware = require("./middlewares/cors");
+const csvParser = require("csv-parser");
 
 dotenv.config();
 
