@@ -63,7 +63,7 @@ module.exports = {
 
     }, updateUserByAdmin: async (req, res) => {
         const userId = req.params.id;
-        const {fullname, username, email, password, address, phone, role, profile} = req.body;
+        const {fullname, username, email, password, address, phone, role, profile, height, weight, age, nationality} = req.body;
 
         try {
             const updates = {};
@@ -96,7 +96,10 @@ module.exports = {
             if (phone) updates.phone = phone;
             if (role) updates.role = role;
             if (profile) updates.profile = profile;
-
+            if (height !== undefined) updates.height = height;
+            if (weight !== undefined) updates.weight = weight;
+            if (age !== undefined) updates.age = age;
+            if (nationality !== undefined) updates.nationality = nationality;
             const updatedUser = await User.findByIdAndUpdate(userId, updates, {new: true});
             if (!updatedUser) {
                 return res.status(404).json({status: false, message: "User not found"});

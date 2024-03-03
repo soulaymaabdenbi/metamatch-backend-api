@@ -16,6 +16,13 @@ const UserSchema = new mongoose.Schema({
         default: "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png"
     },
     verification: {type: Boolean, default: true},
+
+    status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
+    height: { type: String, required: false }, // e.g., "5' 11""
+    weight: { type: Number, required: false }, // e.g., 67
+    age: { type: Number, required: false },    // e.g., 24
+    nationality: { type: String, required: false }, // e.g., "Naples, Italy"
+
 }, {timestamps: true});
 
 module.exports = mongoose.model('User', UserSchema);
