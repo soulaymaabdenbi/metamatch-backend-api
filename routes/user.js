@@ -9,4 +9,5 @@ router.put('/', verifyTokenAndAuthorization, userController.updateUser);
 router.put('/updateUserByAdmin/:id', verifyAdmin, userController.updateUserByAdmin);
 router.get('/getAllUsers', verifyAdmin, userController.getAllUsers);
 router.get('/getUserById/:id', verifyAdmin, userController.getUserById);
+router.put('/changePassword', verifyTokenAndAuthorization, userController.changePassword);
 module.exports = router;
