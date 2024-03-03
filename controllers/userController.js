@@ -63,7 +63,7 @@ module.exports = {
 
     }, updateUserByAdmin: async (req, res) => {
         const userId = req.params.id;
-        const {username, email, password, address, phone, userType, profile} = req.body;
+        const {fullname, username, email, password, address, phone, role, profile} = req.body;
 
         try {
             const updates = {};
@@ -90,10 +90,11 @@ module.exports = {
                 passwordChanged = true;
             }
 
+            if (fullname) updates.fullname = fullname;
             if (username) updates.username = username;
             if (address) updates.address = address;
             if (phone) updates.phone = phone;
-            if (userType) updates.userType = userType;
+            if (role) updates.role = role;
             if (profile) updates.profile = profile;
 
             const updatedUser = await User.findByIdAndUpdate(userId, updates, {new: true});
@@ -111,6 +112,45 @@ module.exports = {
         } catch (error) {
             res.status(500).json({status: false, message: 'Error updating user', error: error.message});
         }
+    }, getUserById: async (req, res) => {
+        const userId = req.params.id;
+
+        try {
+            const user = await User.findById(userId, {__v: 0, updatedAt: 0, createdAt: 0, password: 0});
+            if (!user) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+            res.status(200).json({status: true, user});
+        } catch (e) {
+            res.status(500).json({status: false, message: 'error getting user', error: e.message});
+        }
+    }, changePassword: async (req, res) => {
+        const userId = req.user.id;
+        const {oldPassword, newPassword} = req.body;
+
+        try {
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+
+            const decryptedPassword = CryptoJS.AES.decrypt(user.password, process.env.SECRET_KEY).toString(CryptoJS.enc.Utf8);
+            if (decryptedPassword !== oldPassword) {
+                return res.status(401).json({status: false, message: "Wrong old password"});
+            }
+
+            if (!validatePassword(newPassword)) {
+                return res.status(400).json({
+                    status: false,
+                    message: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character"
+                });
+            }
+            user.password = encryptPassword(newPassword);
+            await user.save();
+            res.status(200).json({status: true, message: "Password updated successfully"});
+        } catch (e) {
+
+            res.status(500).json({status: false, message: 'Error updating password', error: e.message});
+        }
     }
 }
-
