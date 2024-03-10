@@ -17,7 +17,7 @@ const UserSchema = new mongoose.Schema({
     },
     verification: {type: Boolean, default: true},
 
-    status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
+    status: { type: Boolean, default: "true" },
     height: { type: String, required: false }, // e.g., "5' 11""
     weight: { type: Number, required: false }, // e.g., 67
     age: { type: Number, required: false },    // e.g., 24

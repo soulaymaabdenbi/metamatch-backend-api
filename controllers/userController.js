@@ -63,7 +63,9 @@ module.exports = {
 
     }, updateUserByAdmin: async (req, res) => {
         const userId = req.params.id;
-        const {fullname, username, email, password, address, phone, role, profile, height, weight, age, nationality} = req.body;
+        const {
+            fullname, username, email, password, address, phone, role, profile, height, weight, age, nationality
+        } = req.body;
 
         try {
             const updates = {};
@@ -154,6 +156,20 @@ module.exports = {
         } catch (e) {
 
             res.status(500).json({status: false, message: 'Error updating password', error: e.message});
+        }
+    }, changeUserStatus: async (req, res) => {
+        const userId = req.params.id;
+
+        try {
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+            user.status = !user.status;
+            await user.save();
+            res.status(200).json({status: true, message: "User status updated successfully"});
+        } catch (e) {
+            res.status(500).json({status: false, message: 'Error updating user status', error: e.message});
         }
     }
 }

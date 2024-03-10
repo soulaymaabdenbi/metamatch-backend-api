@@ -8,31 +8,21 @@ module.exports = {
 
     createUser: async (req, res) => {
         let {
-            fullname,
-            username,
-            email,
-            password,
-            address,
-            phone,
-            role,
-            profile,
-            height,      // New field
+            fullname, username, email, address, phone, role, profile, height,      // New field
             weight,      // New field
             age,         // New field
             nationality  // New field
         } = req.body;
-        console.log("before generate password : " + password);
 
-        // ... your existing code for password and email validation ...
 
         try {
             const existingUser = await User.findOne({email: email});
             if (existingUser) {
                 return res.status(400).json({status: false, message: "User already exists"});
             }
+            password = generateRandomPassword();
             const encryptedPassword = encryptPassword(password);
 
-            // Construct new user with all provided fields, including new ones
             const newUser = new User({
                 fullname,
                 username,
@@ -43,10 +33,10 @@ module.exports = {
                 role,
                 profile: profile || "https://www.pngitem.com/pimgs/m/146-1468479_my-profile-icon-blank-profile-picture-circle-hd.png",
                 verification: false,
-                height,     // Optional field
-                weight,     // Optional field
-                age,        // Optional field
-                nationality // Optional field
+                height,
+                weight,
+                age,
+                nationality
             });
 
             const savedUser = await newUser.save();
@@ -55,8 +45,7 @@ module.exports = {
         } catch (error) {
             res.status(500).json({status: false, message: "Error creating user", error: error.message});
         }
-    }
-    , loginUser: async (req, res) => {
+    }, loginUser: async (req, res) => {
         const {email, password} = req.body;
 
         if (!validateEmail(email)) {
