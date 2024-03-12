@@ -2,7 +2,7 @@ const mongo = require("mongoose");
 const Schema = mongo.Schema;
 
 const Match = new Schema({
-  //  id: String,
+  //_id: String,
   date: Date,
   location: String,
   teamA: String,
