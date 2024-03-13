@@ -889,10 +889,13 @@ async function scrapeMatches() {
         .find(".verein-gast .vereinsname a")
         .text()
         .trim();
+      const matchResult = $(match).find(".ergebnis .matchresult").text().trim();
+
       const matchDataItem = {
         dateAndTime,
         homeTeamName,
         awayTeamName,
+        matchResult,
       };
       matchData.push(matchDataItem);
     });
