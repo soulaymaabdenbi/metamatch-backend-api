@@ -11,6 +11,6 @@ const storage = multer.diskStorage({
 });
 
 // Set up Multer upload instance
-const upload = multer({ storage: storage, field: "pdfFile" }); // Specify the field key here
+const upload = multer({ storage: storage, field: "csvFile" }); // Specify the field key here
 
 module.exports = upload;

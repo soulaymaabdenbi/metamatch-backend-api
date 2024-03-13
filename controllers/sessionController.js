@@ -1,14 +1,15 @@
 const Session = require("../models/Session");
+const moment = require("moment");
 
-exports.getAllSessions = async (req, res) => {
-  try {
-    const sessions = await Session.find();
-    res.json(sessions);
-  } catch (error) {
-    console.log("Error fetching sessions:", error);
-    res.status(500).json({ error: "Could not fetch sessions" });
-  }
-};
+// exports.getAllSessions = async (req, res) => {
+//   try {
+//     const sessions = await Session.find();
+//     res.json(sessions);
+//   } catch (error) {
+//     console.log("Error fetching sessions:", error);
+//     res.status(500).json({ error: "Could not fetch sessions" });
+//   }
+// };
 
 exports.addSession = async (req, res) => {
   const { date, time, location, topics } = req.body;
@@ -90,3 +91,35 @@ exports.getSessionById = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+exports.getAllSessions = async (req, res) => {
+  try {
+    const sessions = await Session.find();
+
+    // Calculate the number of sessions per week
+    const sessionsPerWeek = calculateSessionsPerWeek(sessions);
+
+    res.json({ sessions, sessionsPerWeek });
+  } catch (error) {
+    console.log("Error fetching sessions:", error);
+    res.status(500).json({ error: "Could not fetch sessions" });
+  }
+};
+
+function calculateSessionsPerWeek(sessions) {
+  const sessionsPerWeek = {};
+  sessions.forEach((session) => {
+    const weekStart = moment(session.date).startOf("isoWeek");
+    const weekEnd = moment(session.date).endOf("isoWeek");
+    const week = `${weekStart.format("YYYY-MM-DD")} to ${weekEnd.format(
+      "YYYY-MM-DD"
+    )}`;
+
+    if (!sessionsPerWeek[week]) {
+      sessionsPerWeek[week] = 1;
+    } else {
+      sessionsPerWeek[week]++;
+    }
+  });
+  return sessionsPerWeek;
+}
