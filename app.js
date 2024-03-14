@@ -38,10 +38,12 @@ app.use('/test', (req, res) => {
     return res.status(200).json({status: true, password});
 });
 
+
 const server = http.createServer(app);
 server.listen(4000, () => {
   console.log("SERVER IS RUNNING ON PORT 3000");
 });
+
 
 
 // Utilisation de la fonction pour générer un jeton JWT de test

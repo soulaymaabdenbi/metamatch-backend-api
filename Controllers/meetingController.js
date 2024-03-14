@@ -1,65 +1,133 @@
+const User = require('../Models/user');
 const Meeting = require('../Models/Meeting');
-const User = require('../Models/User'); // Assurez-vous que le chemin est correct
+const nodemailer = require('nodemailer');
 
 exports.getPhysiotherapists = async (req, res) => {
     try {
-        const physiotherapists = await User.find({ userType: 'Physiotherapist' }, 'username');
+        const physiotherapists = await User.find({ userType: 'Physiotherapist' }, '_id email');
         res.status(200).json(physiotherapists);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Erreur interne du serveur' });
     }
-};exports.getMeetings = async (req, res) => {
-    try {
-        // Récupérer toutes les réunions avec les détails des participants
-        const meetings = await Meeting.find().populate('participants');
+};
 
+
+exports.getMeetings = async (req, res) => {
+    try {
+        const meetings = await Meeting.find().populate('participants');
         res.status(200).json(meetings);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
+};exports.scheduleMeeting = async (req, res) => {
+    const { meetingName, meetingDate, selectedPhysiotherapist, description } = req.body;
+    const playerId = '65f24462f3c7685ce4d91162'; 
+
+    try {
+        if (!meetingName || !meetingDate || !selectedPhysiotherapist) {
+            return res.status(400).json({ message: 'Le nom, la date de la réunion ou le physiothérapeute sélectionné est manquant' });
+        }
+
+        if (new Date(meetingDate) < new Date()) {
+            return res.status(400).json({ message: 'La date de la réunion doit être aujourd\'hui ou dans le futur' });
+        }
+
+       
+        const meeting = new Meeting({ name: meetingName, date: meetingDate, participants: [playerId, selectedPhysiotherapist], description });
+        await meeting.save();
+
+        const physiotherapist = await User.findById(selectedPhysiotherapist);
+        if (!physiotherapist) {
+            return res.status(404).json({ message: 'Physiothérapeute non trouvé' });
+        }
+        const organizerEmail = physiotherapist.email;
+        
+     
+        const player = await User.findById(playerId);
+        if (!player) {
+            return res.status(404).json({ message: 'Joueur non trouvé' });
+        }
+        const playerEmail = player.email; 
+
+        
+        const jitsiMeetLink = generateJitsiMeetLink(meeting.name, meeting.date);
+        const emailSubject = 'Link Jitsi Meet For Meeting';
+        const emailBody = `Hello You're invited to a Meeting.\n\nDate: ${meeting.date}\nLien: ${jitsiMeetLink}`;
+        
+       
+        await Promise.all([
+            sendEmail(organizerEmail, emailSubject, emailBody),
+            sendEmail(playerEmail, emailSubject, emailBody)
+        ]);
+
+        res.status(201).json(meeting);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
 };
 
-// Logique de planification de la réunion
-exports.scheduleMeeting = async (req, res) => {
-    const { date, physiotherapistId, description } = req.body;
-  
-    // Assurez-vous que la propriété description est correctement définie dans le corps de la requête
-   
-    const playerId = '65e3d4cce63639c229b4fddf';
-  
-    try {
-      // Vérifiez si la date est valide (ne doit pas être dans le passé)
-      if (new Date(date) < new Date()) {
-        return res.status(400).json({ message: 'Meeting date must be today or in the future' });
-      }
-  
-      // Créez la réunion en utilisant le joueur et le physiothérapeute sélectionnés
-      const meeting = new Meeting({ date, participants: [playerId, physiotherapistId], description });
-      await meeting.save();
-  
-      res.status(201).json(meeting);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal Server Error' });
+
+async function sendEmail(to, subject, body) {
+    const transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+            user: 'nour.baatour123@gmail.com', 
+            pass: 'tczv wjla uxht bwxi' 
+        }
+    });
+
+    const mailOptions = {
+        from:'nour.baatour123@gmail.com', 
+        to,
+        subject,
+        html: body
+    };
+
+    await transporter.sendMail(mailOptions);
+}
+function generateJitsiMeetLink(name, date) {
+    const jitsiMeetDomain = 'meet.jit.si';
+
+
+    if (!name || !date) {
+        console.error('Le nom ou la date de la réunion est manquant.');
+        return null;
     }
-  };
 
-exports.cancelMeeting = async (req, res) => {
-    const { meetingId } = req.params; // Récupérer l'identifiant de la réunion à annuler depuis les paramètres de la requête
+    const roomName = name.replace(/\s+/g, '-').toLowerCase();
+    const formattedDate = date.toISOString();
+    
+    return `https://${jitsiMeetDomain}/${roomName}?date=${formattedDate}`;
+}
+exports.cancelMeeting = async function(req, res) {
+    const { meetingId } = req.params;
 
     try {
-        // Trouver la réunion dans la base de données
+       
         const meeting = await Meeting.findById(meetingId);
         
-        // Vérifier si la réunion existe
+        
         if (!meeting) {
             return res.status(404).json({ message: 'Réunion non trouvée' });
         }
 
-        // Supprimer la réunion de la base de données
+      
         await Meeting.findByIdAndDelete(meetingId);
+
+       
+        const participants = await User.find({ _id: { $in: meeting.participants } });
+
+        const emailSubject = 'Annulation de la réunion';
+        const emailBody = `La réunion "${meeting.name}" prévue le ${meeting.date} a été annulée.`;
+
+        const promises = participants.map(async participant => {
+            await sendEmail(participant.email, emailSubject, emailBody);
+        });
+
+        await Promise.all(promises);
 
         res.status(200).json({ message: 'Réunion annulée avec succès' });
     } catch (error) {
@@ -67,30 +135,41 @@ exports.cancelMeeting = async (req, res) => {
         res.status(500).json({ message: 'Erreur interne du serveur' });
     }
 };
+
 exports.updateMeeting = async (req, res) => {
-    const { meetingId } = req.params; // Récupérer l'identifiant de la réunion à modifier depuis les paramètres de la requête
-    const updateData = req.body; // Récupérer les données de mise à jour de la réunion depuis le corps de la requête
-
+    const { meetingId } = req.params;
+    const { meetingName, meetingDate, selectedPhysiotherapist, description } = req.body;
+  
     try {
-        // Vérifier si les données de mise à jour contiennent uniquement les champs autorisés
-        const allowedFields = ['date', 'physiotherapistId']; // Liste des champs autorisés à mettre à jour
-        const isValidOperation = Object.keys(updateData).every(field => allowedFields.includes(field));
-
-        if (!isValidOperation) {
-            return res.status(400).json({ message: 'Mise à jour invalide. Seuls les champs suivants peuvent être mis à jour : date, physiotherapistId' });
-        }
-
-        // Trouver la réunion dans la base de données et mettre à jour ses données
-        const updatedMeeting = await Meeting.findByIdAndUpdate(meetingId, updateData, { new: true });
-
-        // Vérifier si la réunion existe
-        if (!updatedMeeting) {
-            return res.status(404).json({ message: 'Réunion non trouvée' });
-        }
-
-        res.status(200).json({ message: 'Réunion mise à jour avec succès', meeting: updatedMeeting });
+    
+      const updatedMeeting = await Meeting.findByIdAndUpdate(meetingId, {
+        meetingName,
+        meetingDate,
+        selectedPhysiotherapist,
+        description
+      }, { new: true });
+  
+     
+      const physiotherapist = await Physiotherapist.findById(selectedPhysiotherapist);
+  
+   
+      if (physiotherapist) {
+        const notificationData = {
+          recipient: physiotherapist.email,
+          subject: 'Modification de réunion',
+          body: `La réunion "${meetingName}" a été modifiée pour le ${meetingDate}.`
+        };
+        NotificationService.sendNotification(notificationData);
+      } else {
+        console.warn(`Physiothérapeute avec l'ID ${selectedPhysiotherapist} non trouvé.`);
+      }
+  
+  
+      res.status(200).json(updatedMeeting);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erreur interne du serveur' });
+      console.error('Erreur lors de la mise à jour de la réunion:', error);
+      res.status(500).json({ error: 'Erreur lors de la mise à jour de la réunion. Veuillez réessayer.' });
     }
-};
+  };
+  
+exports.sendEmail = sendEmail;
