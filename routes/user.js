@@ -11,4 +11,5 @@ router.get('/getAllUsers', verifyCoach, userController.getAllUsers);
 router.get('/getUserById/:id', verifyCoach, userController.getUserById);
 router.put('/changePassword', verifyTokenAndAuthorization, userController.changePassword);
 router.put('/changeUserStatus/:id', verifyCoach, userController.changeUserStatus);
+router.post('/forgetPassword', userController.forgetPassword);
 module.exports = router;

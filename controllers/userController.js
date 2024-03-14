@@ -2,8 +2,8 @@ const User = require('../models/User');
 const CryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-const {validateEmail, validatePassword, encryptPassword} = require('../utils/helper');
-const {sendAccountCredentials} = require("../utils/smtp_function");
+const {validateEmail, validatePassword, encryptPassword, generateRandomPassword} = require('../utils/helper');
+const {sendAccountCredentials, sendResetPasswordEmail} = require("../utils/smtp_function");
 module.exports = {
     getAllUsers: async (req, res) => {
         try {
@@ -170,6 +170,22 @@ module.exports = {
             res.status(200).json({status: true, message: "User status updated successfully"});
         } catch (e) {
             res.status(500).json({status: false, message: 'Error updating user status', error: e.message});
+        }
+    }, forgetPassword: async (req, res) => {
+        const email = req.body.email;
+
+        try {
+            const user = await User.findOne({email: email, role: {$ne: 'Player'}});
+            if (!user) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+            let newPassword = generateRandomPassword();
+            user.password = encryptPassword(newPassword);
+            await user.save();
+            await sendResetPasswordEmail(email, user.username, newPassword);
+            res.status(200).json({status: true, message: "New password sent to your email"});
+        } catch (e) {
+            res.status(500).json({status: false, message: 'Error updating password', error: e.message});
         }
     }
 }
