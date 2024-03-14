@@ -2,8 +2,8 @@ const User = require('../models/User');
 const CryptoJS = require('crypto-js');
 const jwt = require('jsonwebtoken');
 const admin = require('firebase-admin');
-const {validateEmail, validatePassword, encryptPassword} = require('../utils/helper');
-const {sendAccountCredentials} = require("../utils/smtp_function");
+const {validateEmail, validatePassword, encryptPassword, generateRandomPassword} = require('../utils/helper');
+const {sendAccountCredentials, sendResetPasswordEmail} = require("../utils/smtp_function");
 module.exports = {
     getAllUsers: async (req, res) => {
         try {
@@ -63,7 +63,9 @@ module.exports = {
 
     }, updateUserByAdmin: async (req, res) => {
         const userId = req.params.id;
-        const {fullname, username, email, password, address, phone, role, profile} = req.body;
+        const {
+            fullname, username, email, password, address, phone, role, profile, height, weight, age, nationality
+        } = req.body;
 
         try {
             const updates = {};
@@ -96,7 +98,10 @@ module.exports = {
             if (phone) updates.phone = phone;
             if (role) updates.role = role;
             if (profile) updates.profile = profile;
-
+            if (height !== undefined) updates.height = height;
+            if (weight !== undefined) updates.weight = weight;
+            if (age !== undefined) updates.age = age;
+            if (nationality !== undefined) updates.nationality = nationality;
             const updatedUser = await User.findByIdAndUpdate(userId, updates, {new: true});
             if (!updatedUser) {
                 return res.status(404).json({status: false, message: "User not found"});
@@ -150,6 +155,36 @@ module.exports = {
             res.status(200).json({status: true, message: "Password updated successfully"});
         } catch (e) {
 
+            res.status(500).json({status: false, message: 'Error updating password', error: e.message});
+        }
+    }, changeUserStatus: async (req, res) => {
+        const userId = req.params.id;
+
+        try {
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+            user.status = !user.status;
+            await user.save();
+            res.status(200).json({status: true, message: "User status updated successfully"});
+        } catch (e) {
+            res.status(500).json({status: false, message: 'Error updating user status', error: e.message});
+        }
+    }, forgetPassword: async (req, res) => {
+        const email = req.body.email;
+
+        try {
+            const user = await User.findOne({email: email, role: {$ne: 'Player'}});
+            if (!user) {
+                return res.status(404).json({status: false, message: "User not found"});
+            }
+            let newPassword = generateRandomPassword();
+            user.password = encryptPassword(newPassword);
+            await user.save();
+            await sendResetPasswordEmail(email, user.username, newPassword);
+            res.status(200).json({status: true, message: "New password sent to your email"});
+        } catch (e) {
             res.status(500).json({status: false, message: 'Error updating password', error: e.message});
         }
     }
