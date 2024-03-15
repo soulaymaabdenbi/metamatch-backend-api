@@ -57,8 +57,13 @@ module.exports = {
 
         try {
             const user = await User.findOne({email: email}).select('-__v -updatedAt -createdAt');
+            console.log(user);
             if (!user) {
                 return res.status(401).json({status: false, message: "Wrong email or password"}); // Use a generic message for security
+            }
+            console.log(user.verification);
+            if (user.verification === false) {
+                return res.status(401).json({status: false, message: "Your Account has been disabled"});
             }
 
             const decryptedPassword = CryptoJS.AES.decrypt(user.password, process.env.SECRET_KEY).toString(CryptoJS.enc.Utf8);
@@ -90,9 +95,12 @@ module.exports = {
             console.log('Google Payload:', payload.email);
             // Check if the user already exists in the database
             const user = await User.findOne({ email: payload.email }).select('-__v -updatedAt -createdAt');
-            console.log('User:', user);
+
             if (user) {
-                // If the user exists, generate a token for the user
+
+                if (!user.verification) {
+                    return res.status(401).json({ status: false, message: "Your Account has been disabled" });
+                }
                 const userToken = jwt.sign({
                     id: user._id,
                     role: user.role,
@@ -107,7 +115,7 @@ module.exports = {
                     token: userToken,
                 });
             } else {
-                // If user doesn't exist, return an error
+
                 res.status(404).json({ status: false, message: "No account found with this email address." });
             }
         } catch (error) {
