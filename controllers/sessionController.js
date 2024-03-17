@@ -1,20 +1,9 @@
 const Session = require("../models/Session");
 const moment = require("moment");
 
-// exports.getAllSessions = async (req, res) => {
-//   try {
-//     const sessions = await Session.find();
-//     res.json(sessions);
-//   } catch (error) {
-//     console.log("Error fetching sessions:", error);
-//     res.status(500).json({ error: "Could not fetch sessions" });
-//   }
-// };
-
 exports.addSession = async (req, res) => {
   const { date, time, location, topics } = req.body;
 
-  // Check if any required fields are missing
   if (!date || !time || !location || !topics) {
     return res
       .status(400)
@@ -99,7 +88,6 @@ exports.getAllSessions = async (req, res) => {
   try {
     const sessions = await Session.find();
 
-    // Calculate the number of sessions per week
     const sessionsPerWeek = calculateSessionsPerWeek(sessions);
 
     res.json({ sessions, sessionsPerWeek });

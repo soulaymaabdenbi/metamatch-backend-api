@@ -1,47 +1,56 @@
 [
   {
-    "dateAndTime": "Tue                    \n                    Mar 5, 2024",
-    "homeTeamName": "Esperance",
-    "awayTeamName": "Stade Tunisien"
-  },
-  {
-    "dateAndTime": "Wed                    \n                    Mar 6, 2024",
-    "homeTeamName": "CS Sfaxien",
-    "awayTeamName": "Club Africain"
-  },
-  {
-    "dateAndTime": "",
-    "homeTeamName": "US Monastir",
-    "awayTeamName": "ES Sahel"
-  },
-  {
     "dateAndTime": "Sat                    \n                    Mar 9, 2024",
     "homeTeamName": "Club Africain",
-    "awayTeamName": "US Monastir"
+    "awayTeamName": "US Monastir",
+    "matchResult": "1:0"
   },
   {
     "dateAndTime": "Sun                    \n                    Mar 10, 2024",
     "homeTeamName": "Stade Tunisien",
-    "awayTeamName": "CS Sfaxien"
+    "awayTeamName": "CS Sfaxien",
+    "matchResult": "0:0"
   },
   {
-    "dateAndTime": "",
+    "dateAndTime": "Sun                    \n                    Mar 10, 2024",
     "homeTeamName": "ES Sahel",
-    "awayTeamName": "Esperance"
+    "awayTeamName": "Esperance",
+    "matchResult": "0:1"
   },
   {
     "dateAndTime": "Sat                    \n                    Mar 16, 2024",
     "homeTeamName": "CS Sfaxien",
-    "awayTeamName": "US Monastir"
+    "awayTeamName": "US Monastir",
+    "matchResult": "2:00 PM"
   },
   {
-    "dateAndTime": "",
+    "dateAndTime": "Sat                    \n                    Mar 16, 2024",
     "homeTeamName": "Esperance",
-    "awayTeamName": "Club Africain"
+    "awayTeamName": "Club Africain",
+    "matchResult": "2:00 PM"
   },
   {
-    "dateAndTime": "",
+    "dateAndTime": "Sat                    \n                    Mar 16, 2024",
     "homeTeamName": "Stade Tunisien",
-    "awayTeamName": "ES Sahel"
+    "awayTeamName": "ES Sahel",
+    "matchResult": "2:00 PM"
+  },
+  {
+    "dateAndTime": "Wed                    \n                    Apr 10, 2024",
+    "homeTeamName": "US Monastir",
+    "awayTeamName": "Esperance",
+    "matchResult": "-:-"
+  },
+  {
+    "dateAndTime": "Wed                    \n                    Apr 10, 2024",
+    "homeTeamName": "Club Africain",
+    "awayTeamName": "Stade Tunisien",
+    "matchResult": "-:-"
+  },
+  {
+    "dateAndTime": "Wed                    \n                    Apr 10, 2024",
+    "homeTeamName": "CS Sfaxien",
+    "awayTeamName": "ES Sahel",
+    "matchResult": "-:-"
   }
 ]

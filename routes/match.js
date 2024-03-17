@@ -30,4 +30,39 @@ router.get("/matches", async (req, res) => {
   }
 });
 
+router.get("/articles", async (req, res) => {
+  try {
+    // Fetch scraped data from file
+    const articleData = await fs.readFile("articleData.json", "utf8");
+    const parsedArticleData = JSON.parse(articleData);
+
+    // Send scraped data as JSON response
+    res.json(parsedArticleData);
+  } catch (error) {
+    console.error("Error fetching match data:", error);
+    // If file does not exist or error occurs, send 500 error response
+    res.status(500).json({ error: "Error fetching match data" });
+  }
+});
+
+exports.startScraping = async () => {
+  try {
+    await scrapeMatches(); // Perform the scraping operation
+    console.log("Scraping completed successfully.");
+  } catch (error) {
+    console.error("Error during scraping:", error);
+    // Handle error if needed
+  }
+};
+
+exports.startScrapingArticles = async () => {
+  try {
+    await scrapeArticles(); // Perform the scraping operation
+    console.log("Scraping completed successfully.");
+  } catch (error) {
+    console.error("Error during scraping:", error);
+    // Handle error if needed
+  }
+};
+
 module.exports = router;
