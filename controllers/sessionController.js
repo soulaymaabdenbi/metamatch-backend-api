@@ -1,18 +1,14 @@
 const Session = require("../models/Session");
 const moment = require("moment");
 
-// exports.getAllSessions = async (req, res) => {
-//   try {
-//     const sessions = await Session.find();
-//     res.json(sessions);
-//   } catch (error) {
-//     console.log("Error fetching sessions:", error);
-//     res.status(500).json({ error: "Could not fetch sessions" });
-//   }
-// };
-
 exports.addSession = async (req, res) => {
   const { date, time, location, topics } = req.body;
+
+  if (!date || !time || !location || !topics) {
+    return res
+      .status(400)
+      .json({ error: "Missing required fields: date, time, location, topics" });
+  }
 
   try {
     const existingSession = await Session.findOne({ date: date, time: time });
@@ -22,22 +18,18 @@ exports.addSession = async (req, res) => {
         .status(409)
         .json({ error: "Conflict: A session already exists at this time." });
     }
-  } catch (error) {
-    console.error("Error checking for conflicts:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
 
-  try {
     const newSession = await Session.create({
       date,
       time,
       location,
       topics,
     });
-    res.status(201).json(newSession);
+
+    return res.status(201).json(newSession);
   } catch (error) {
     console.error("Error saving session:", error);
-    res.status(400).json({ error: error.message });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
@@ -96,7 +88,6 @@ exports.getAllSessions = async (req, res) => {
   try {
     const sessions = await Session.find();
 
-    // Calculate the number of sessions per week
     const sessionsPerWeek = calculateSessionsPerWeek(sessions);
 
     res.json({ sessions, sessionsPerWeek });

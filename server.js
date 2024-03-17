@@ -6,8 +6,10 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const sessionRouter = require("./routes/sessions");
 const matchRouter = require("./routes/match");
+const forumRouter = require("./routes/forum");
 const corsMiddleware = require("./middlewares/cors");
 const csvParser = require("csv-parser");
+const { startScrapingArticles } = require("./controllers/matchController");
 
 dotenv.config();
 
@@ -20,6 +22,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/sessions", sessionRouter);
 app.use("/matches", matchRouter);
+
+app.use("/forum", forumRouter);
+//startScrapingArticles();
+
 
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
@@ -52,6 +58,7 @@ app.use('/test', (req, res) => {
         });
     }
     return res.status(200).json({status: true, password});
+
 
 
 app.use("/test", (req, res) => {
