@@ -2,6 +2,7 @@ const User = require('../Models/user');
 const Meeting = require('../Models/Meeting');
 const nodemailer = require('nodemailer');
 
+
 exports.getPhysiotherapists = async (req, res) => {
     try {
         const physiotherapists = await User.find({ userType: 'Physiotherapist' }, '_id email');
@@ -34,32 +35,30 @@ exports.getMeetings = async (req, res) => {
             return res.status(400).json({ message: 'La date de la réunion doit être aujourd\'hui ou dans le futur' });
         }
 
-       
+      
         const meeting = new Meeting({ name: meetingName, date: meetingDate, participants: [playerId, selectedPhysiotherapist], description });
         await meeting.save();
 
-        const physiotherapist = await User.findById(selectedPhysiotherapist);
-        if (!physiotherapist) {
-            return res.status(404).json({ message: 'Physiothérapeute non trouvé' });
-        }
-        const organizerEmail = physiotherapist.email;
         
-     
         const player = await User.findById(playerId);
-        if (!player) {
-            return res.status(404).json({ message: 'Joueur non trouvé' });
-        }
-        const playerEmail = player.email; 
+        const playerEmail = player.email;
 
         
-        const jitsiMeetLink = generateJitsiMeetLink(meeting.name, meeting.date);
-        const emailSubject = 'Link Jitsi Meet For Meeting';
-        const emailBody = `Hello You're invited to a Meeting.\n\nDate: ${meeting.date}\nLien: ${jitsiMeetLink}`;
-        
+        const physiotherapist = await User.findById(selectedPhysiotherapist);
+        const physiotherapistEmail = physiotherapist.email;
+
+        const confirmationLink = generateConfirmationLink(meeting._id);
+
+        await sendEmail(physiotherapistEmail, 'Confirmation de réunion', `Cliquez sur ce lien pour confirmer la réunion : ${confirmationLink}`);
+
        
+        const jitsiMeetLink = generateJitsiMeetLink(meeting.name, meeting.date);
+        const emailSubject = 'Lien Jitsi Meet Pour La Réunion';
+        const emailBody = `Bonjour, vous avez organisé une réunion.\n\nDate: ${meeting.date}\nLien: ${jitsiMeetLink}`;
+
         await Promise.all([
-            sendEmail(organizerEmail, emailSubject, emailBody),
-            sendEmail(playerEmail, emailSubject, emailBody)
+            sendEmail(playerEmail, emailSubject, emailBody),
+            sendEmail(physiotherapistEmail, emailSubject, emailBody)
         ]);
 
         res.status(201).json(meeting);
@@ -69,7 +68,7 @@ exports.getMeetings = async (req, res) => {
     }
 };
 
-
+  
 async function sendEmail(to, subject, body) {
     const transporter = nodemailer.createTransport({
         service: 'Gmail',
@@ -171,5 +170,52 @@ exports.updateMeeting = async (req, res) => {
       res.status(500).json({ error: 'Erreur lors de la mise à jour de la réunion. Veuillez réessayer.' });
     }
   };
-  
+  function generateConfirmationLink(meetingId) {
+   
+    return `http://localhost:4000/api/confirmMeeting/${meetingId}`;
+} 
+exports.confirmMeeting = async (req, res) => {
+    const { meetingId } = req.params;
+
+    try {
+      
+        const meeting = await Meeting.findById(meetingId);
+        
+        if (!meeting) {
+            return res.status(404).json({ message: 'Réunion non trouvée' });
+        }
+
+        if (meeting.confirmed) {
+            return res.status(400).json({ message: 'La réunion est déjà confirmée' });
+        }
+
+       
+        meeting.confirmed = true;
+        await meeting.save();
+
+        res.status(200).json({ message: 'Réunion confirmée avec succès' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
+
+exports.getMeetingById = async (req, res) => {
+    const { meetingId } = req.params;
+
+    try {
+        const meeting = await Meeting.findById(meetingId);
+        
+        if (!meeting) {
+            return res.status(404).json({ message: 'Réunion non trouvée' });
+        }
+
+        res.status(200).json(meeting);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
 exports.sendEmail = sendEmail;
