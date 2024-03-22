@@ -12,9 +12,11 @@ router.put('/updateMeeting/:meetingId', meetingController.updateMeeting);
 
 //router.get('/meetings', meetingController.getMeetings);
 
-const { getPhysiotherapists, getMeetings, scheduleMeeting ,confirmMeeting} = require('../Controllers/meetingController');
+const { getPhysiotherapists, getMeetings, scheduleMeeting ,confirmMeeting,getPlayers,scheduleMeetingWithDoctor} = require('../Controllers/meetingController');
 
 router.get('/physiotherapists', getPhysiotherapists);
+router.get('/players', getPlayers);
+router.get('/doctors', meetingController.getDoctors);
 router.get('/meetings', getMeetings);
 router.post('/schedule-meeting', scheduleMeeting);
 router.delete('/cancel-meeting/:meetingId', meetingController.cancelMeeting);
@@ -23,4 +25,6 @@ router.put('/update-meeting/:meetingId', meetingController.cancelMeeting);
 router.post('/confirmMeeting/:meetingId', meetingController.confirmMeeting);
 router.get('/meeting/:meetingId', meetingController.getMeetingById);
 router.get('/confirmMeeting/:meetingId', meetingController.confirmMeeting); 
+router.get('/meetings/player/:playerId', meetingController.getMeetingsByPlayerId);
+router.post('/schedule-meetingwithdoctor', meetingController.scheduleMeetingWithDoctor);
 module.exports = router;

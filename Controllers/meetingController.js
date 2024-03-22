@@ -13,6 +13,37 @@ exports.getPhysiotherapists = async (req, res) => {
     }
 };
 
+exports.getDoctors = async (req, res) => {
+    try {
+        const doctors = await User.find({ userType: 'Doctor' }, '_id email');
+        res.status(200).json(doctors);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
+exports.getPlayers = async (req, res) => {
+    try {
+        const players = await User.find({ userType: 'Player' }, '_id email');
+        res.status(200).json(players);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
+exports.getMeetingsByPlayerId = async (req, res) => {
+    const playerId = req.params.playerId;
+    try {
+        const meetings = await Meeting.find({ participants: playerId });
+        res.status(200).json(meetings);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
 
 exports.getMeetings = async (req, res) => {
     try {
@@ -68,7 +99,55 @@ exports.getMeetings = async (req, res) => {
     }
 };
 
-  
+
+
+exports.scheduleMeetingWithDoctor = async (req, res) => {
+    const { meetingName, meetingDate, selectedDoctor, description } = req.body;
+    const playerId = '65f24462f3c7685ce4d91162'; 
+
+    try {
+        if (!meetingName || !meetingDate || !selectedDoctor) {
+            return res.status(400).json({ message: 'Le nom, la date de la réunion ou le physiothérapeute sélectionné est manquant' });
+        }
+
+        if (new Date(meetingDate) < new Date()) {
+            return res.status(400).json({ message: 'La date de la réunion doit être aujourd\'hui ou dans le futur' });
+        }
+
+      
+        const meeting = new Meeting({ name: meetingName, date: meetingDate, participants: [playerId, selectedDoctor], description });
+        await meeting.save();
+
+        
+        const player = await User.findById(playerId);
+        const playerEmail = player.email;
+
+        
+        const doctor = await User.findById(selectedDoctor);
+        const doctorEmail = doctor.email;
+
+        const confirmationLink = generateConfirmationLink(meeting._id);
+
+        await sendEmail(doctorEmail, 'Confirmation de réunion', `Cliquez sur ce lien pour confirmer la réunion : ${confirmationLink}`);
+
+       
+        const jitsiMeetLink = generateJitsiMeetLink(meeting.name, meeting.date);
+        const emailSubject = 'Lien Jitsi Meet Pour La Réunion';
+        const emailBody = `Bonjour, vous avez organisé une réunion.\n\nDate: ${meeting.date}\nLien: ${jitsiMeetLink}`;
+
+        await Promise.all([
+            sendEmail(playerEmail, emailSubject, emailBody),
+            sendEmail(doctorEmail, emailSubject, emailBody)
+        ]);
+
+        res.status(201).json(meeting);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
+ 
 async function sendEmail(to, subject, body) {
     const transporter = nodemailer.createTransport({
         service: 'Gmail',
@@ -174,7 +253,7 @@ exports.updateMeeting = async (req, res) => {
    
     return `http://localhost:4000/api/confirmMeeting/${meetingId}`;
 } 
-exports.confirmMeeting = async (req, res) => {
+/*exports.confirmMeeting = async (req, res) => {
     const { meetingId } = req.params;
 
     try {
@@ -199,7 +278,55 @@ exports.confirmMeeting = async (req, res) => {
         res.status(500).json({ message: 'Erreur interne du serveur' });
     }
 };
+*/
+exports.confirmMeeting = async (req, res) => {
+    const { meetingId } = req.params;
 
+    try {
+        const meeting = await Meeting.findById(meetingId);
+        
+        if (!meeting) {
+            return res.status(404).json({ message: 'Réunion non trouvée' });
+        }
+
+        if (meeting.confirmed) {
+            return res.status(400).json({ message: 'La réunion est déjà confirmée' });
+        }
+
+        meeting.confirmed = true;
+        await meeting.save();
+
+        // Renvoyer une page HTML de confirmation
+        res.status(200).send(`
+            <html>
+                <head>
+                    <title>Confirmation de réunion</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            background-color: #f0f0f0;
+                            padding: 20px;
+                        }
+                        .success-message {
+                            background-color: #4CAF50;
+                            color: white;
+                            padding: 10px;
+                            border-radius: 5px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="success-message">
+                        Réunion confirmée avec succès !
+                    </div>
+                </body>
+            </html>
+        `);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
 
 exports.getMeetingById = async (req, res) => {
     const { meetingId } = req.params;
