@@ -6,9 +6,12 @@ const bodyParser = require("body-parser");
 const sessionRouter = require("./routes/sessions");
 const matchRouter = require("./routes/match");
 const forumRouter = require("./routes/forum");
+const blogRouter = require("./routes/blog");
 const corsMiddleware = require("./middlewares/cors");
 const csvParser = require("csv-parser");
-const { startScrapingArticles } = require("./controllers/matchController");
+const cron = require("node-cron");
+const { scrapeArticles } = require("./controllers/BlogController");
+const { scrapeMatches } = require("./controllers/matchController");
 
 dotenv.config();
 
@@ -22,7 +25,18 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/sessions", sessionRouter);
 app.use("/matches", matchRouter);
 app.use("/forum", forumRouter);
-//startScrapingArticles();
+app.use("/blog", blogRouter);
+
+cron.schedule("0 0 * * *", async () => {
+  try {
+    await scrapeArticles();
+    await scrapeMatches();
+    console.log("Scraping triggered successfully");
+  } catch (error) {
+    console.error("Error occurred while triggering scraping:", error);
+  }
+});
+
 app.use("/test", (req, res) => {
   res.status(200).json({ message: "Welcome to metamatch app" });
 });

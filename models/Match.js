@@ -4,6 +4,7 @@ const Schema = mongo.Schema;
 const Match = new Schema({
   //_id: String,
   date: Date,
+  time: String,
   location: String,
   teamA: String,
   teamB: String,
