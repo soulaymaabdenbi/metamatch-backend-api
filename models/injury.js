@@ -1,10 +1,11 @@
 const mongoo = require('mongoose');
+const { number } = require('yup');
 
 const recoveryStatusEnum = ["In Progress", "Recovered", "In Rehabilitation"];
 
 const injury = new mongoo.Schema({
   player_id: {
-    type: mongoo.Schema.Types.ObjectId,
+    type: mongoo.Schema.Types.ObjectId , // Utilisez ObjectId comme type pour la clé étrangère
     ref: 'joueur',
     required: true
   },
@@ -26,8 +27,12 @@ const injury = new mongoo.Schema({
     enum: recoveryStatusEnum
   },
   duration: {
-    type: String,
+    type: Date,
     required: true
+  },
+  archived: {
+    type: Boolean,
+    default: false  
   }
 });
 

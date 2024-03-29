@@ -1,0 +1,7 @@
+player_id;date;type;description;recovery_status;duration
+mohamed;2023-04-21T00:00:00.000Z;nouuurr;Blessure au genou;In Rehabilitation;3
+amine;2023-04-21T00:00:00.000Z;qqqqqq;Blessure à l'épaule;In Rehabilitation;1
+youssef;2023-04-21T00:00:00.000Z;asmaaaaa;Blessure au dos;Recovered;1
+youssef;2022-10-10T00:00:00.000Z;azeeeerrr;Blessure au pied;Recovered;10
+youssef;2022-11-11T00:00:00.000Z;mazeenn;Blessure à la cheville;Recovered;20
+amine;2022-02-02T00:00:00.000Z;sarra;Blessure à la cheville;Recovered;12
