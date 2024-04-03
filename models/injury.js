@@ -6,7 +6,7 @@ const recoveryStatusEnum = ["In Progress", "Recovered", "In Rehabilitation"];
 const injury = new mongoo.Schema({
   player_id: {
     type: mongoo.Schema.Types.ObjectId , // Utilisez ObjectId comme type pour la clé étrangère
-    ref: 'joueur',
+    ref: 'User',
     required: true
   },
   date: {
