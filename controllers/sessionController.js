@@ -33,23 +33,51 @@ exports.addSession = async (req, res) => {
   }
 };
 
+// exports.updateSession = async (req, res) => {
+//   const { id } = req.params;
+//   const { date, time, location, topics } = req.body;
+//   try {
+//     const existingSession = await Session.findOne({ date: date });
+
+//     if (existingSession) {
+//       return res.status(400).json({
+//         message: "Conflict",
+//       });
+//     }
+
+//     const updatedSession = await Session.findByIdAndUpdate(
+//       id,
+//       { date, time, location, topics },
+//       { new: true }
+//     );
+//     if (!updatedSession) {
+//       return res.status(404).json({ error: "Session not found" });
+//     }
+//     res.json(updatedSession);
+//   } catch (error) {
+//     console.log("Error updating session:", error);
+//     res.status(400).json({ error: error.message });
+//   }
+// };
+
 exports.updateSession = async (req, res) => {
   const { id } = req.params;
-  const { date, time, location, topics } = req.body;
+  const { date } = req.body;
   try {
-    const existingSession = await Session.findOne({ date: date });
+    const existingSession = await Session.findOne({
+      date: date,
+      _id: { $ne: id },
+    });
 
-    if (existingSession && existingSession._id != id) {
-      return res.status(409).json({
-        error: "Conflict: A session already exists at this date and time.",
+    if (existingSession) {
+      return res.status(400).json({
+        message: "Conflict",
       });
     }
 
-    const updatedSession = await Session.findByIdAndUpdate(
-      id,
-      { date, time, location, topics },
-      { new: true }
-    );
+    const updatedSession = await Session.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
     if (!updatedSession) {
       return res.status(404).json({ error: "Session not found" });
     }

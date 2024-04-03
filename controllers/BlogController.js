@@ -33,6 +33,9 @@ async function scrapeArticles() {
     const articleData = [];
 
     $(".newsticker__box").each((index, element) => {
+      // Skip the first two articles
+      if (index < 2) return;
+
       const articleUrl = $(element).find(".newsticker__link").attr("href");
       const publicationDate = $(element)
         .find(".newsticker__boxheader")
@@ -96,3 +99,5 @@ async function saveArticles(articles) {
     throw error;
   }
 }
+
+module.exports = { scrapeArticles };

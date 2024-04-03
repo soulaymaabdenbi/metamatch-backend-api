@@ -9,7 +9,7 @@ const upload = multer({ dest: "uploads/" });
 // Define routes
 router.get("/", matchController.getAllMatches);
 router.post("/", matchController.addMatch);
-//router.post("/upload-csv", upload.single("csvFile"), matchController.uploadCSV);
+router.post("/upload-csv", upload.single("csvFile"), matchController.uploadCSV);
 router.put("/:id", matchController.updateMatch);
 router.delete("/:id", matchController.deleteMatch);
 router.get("/match/:id", matchController.getMatchById);

@@ -1,5 +1,5 @@
 const Match = require("../models/Match");
-const PDFParser = require("pdf-parse");
+
 const csvParser = require("csv-parser");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
@@ -7,7 +7,10 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const csv = require("csv-parser");
 const mongoose = require("mongoose");
-const fs = require("fs").promises;
+//const fs = require("fs").promises;
+const fs = require("fs");
+
+const chokidar = require("chokidar");
 
 const moment = require("moment");
 
@@ -38,30 +41,14 @@ exports.addMatch = async (req, res) => {
   }
 };
 
-// exports.updateMatch = async (req, res) => {
-//   const { id } = req.params;
-//   try {
-//     const updatedMatch = await Match.findByIdAndUpdate(id, req.body, {
-//       new: true,
-//     });
-//     if (!updatedMatch) {
-//       return res.status(404).json({ message: "Match not found" });
-//     }
-//     res.json(updatedMatch);
-//   } catch (error) {
-//     res.status(400).json({ message: error.message });
-//   }
-// };
-
 exports.updateMatch = async (req, res) => {
   const { id } = req.params;
   const { date } = req.body;
 
   try {
-    // Check if there is another match scheduled on the same date
     const existingMatch = await Match.findOne({
       date,
-      _id: { $ne: id }, // Exclude the match being updated from this check
+      _id: { $ne: id },
     });
 
     if (existingMatch) {
@@ -133,7 +120,6 @@ async function getHtml() {
     const response = await axios.get(url, {
       headers: {
         "User-Agent": generateRandomUserAgent(),
-        // Add other headers if necessary
       },
     });
     return response.data;
@@ -191,8 +177,29 @@ async function scrapeMatches() {
 }
 
 async function saveMatchData(matchData) {
+  let lastKnownDate = "";
+  matchData.forEach((match) => {
+    if (match.dateAndTime.trim()) {
+      lastKnownDate = match.dateAndTime;
+    } else if (lastKnownDate) {
+      match.dateAndTime = lastKnownDate;
+    }
+  });
+
   try {
-    await fs.writeFile("matchData.json", JSON.stringify(matchData, null, 2));
+    await fs.promises.writeFile(
+      "matchData.json",
+      JSON.stringify(matchData, null, 2),
+      (err) => {
+        if (err) {
+          console.error("Error saving match data:", err);
+          throw err;
+        }
+        console.log(
+          "Match data saved successfully, with missing dates filled in."
+        );
+      }
+    );
   } catch (error) {
     console.error("Error saving match data:", error);
     throw error;
@@ -202,3 +209,210 @@ async function saveMatchData(matchData) {
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+exports.uploadCSV = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const fileContent = fs.readFileSync(req.file.path, "utf-8");
+
+    const rows = fileContent
+      .trim()
+      .split("\n")
+      .map((row) => row.split(";").map((col) => col.trim()));
+
+    if (rows.length > 1) {
+      rows.shift(); // Remove header row
+    }
+
+    for (const row of rows) {
+      const [date, time, location, teamA, teamB] = row;
+
+      console.log("Parsing row:", row);
+
+      const parsedDate = moment(date, "DD/MM/YYYY").toDate();
+      const parsedTime = moment(time, "HH:mm").format("HH:mm");
+
+      console.log("Parsed date:", parsedDate);
+      console.log("Parsed time:", parsedTime);
+      console.log("Location:", location);
+      console.log("Team A:", teamA);
+      console.log("Team B:", teamB);
+
+      if (!parsedDate || isNaN(parsedDate.getTime()) || !parsedTime) {
+        console.error("Invalid match data in row:", row);
+        continue;
+      }
+
+      const existingMatch = await Match.findOne({
+        date: parsedDate,
+        time: parsedTime,
+        location,
+        teamA,
+        teamB,
+      });
+
+      if (existingMatch) {
+        await Match.findOneAndUpdate(
+          {
+            date: parsedDate,
+            time: parsedTime,
+            location,
+            teamA,
+            teamB,
+          },
+          {
+            $set: {
+              date: parsedDate,
+              time: parsedTime,
+              location,
+              teamA,
+              teamB,
+            },
+          }
+        );
+        console.log("Match updated:", row.join(","));
+      } else {
+        await Match.create({
+          date: parsedDate,
+          time: parsedTime,
+          location,
+          teamA,
+          teamB,
+        });
+        console.log("New match created:", row.join(","));
+      }
+    }
+
+    res.json({
+      message: "CSV file uploaded and match data inserted/updated successfully",
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+async function processCSVFile(filePath) {
+  try {
+    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const rows = fileContent
+      .trim()
+      .split("\n")
+      .map((row) => row.split(";").map((col) => col.trim()));
+
+    // Skip the header row
+    if (rows.length > 0) {
+      rows.shift(); // Remove the first element (header row)
+    }
+
+    const newMatchSignatures = new Set();
+
+    for (const row of rows) {
+      const [date, time, location, teamA, teamB] = row;
+
+      const parsedDate = moment(date, "DD/MM/YYYY").toDate();
+      const parsedTime = moment(time, "HH:mm").format("HH:mm");
+
+      if (
+        !parsedDate ||
+        isNaN(parsedDate.getTime()) ||
+        !parsedTime ||
+        !location ||
+        !teamA ||
+        !teamB
+      ) {
+        console.error("Invalid match data in row:", row);
+        continue;
+      }
+
+      // Query to find existing match
+      const query = {
+        date: parsedDate,
+        time: parsedTime,
+        location,
+        teamA,
+        teamB,
+      };
+
+      // Update data for the existing match
+      const update = {
+        date: parsedDate,
+        time: parsedTime,
+        location,
+        teamA,
+        teamB,
+      };
+
+      // Find and update the existing match
+      const result = await Match.findOneAndUpdate(query, update, {
+        upsert: true,
+      });
+
+      // Add match signature to the set
+      const matchSignature = `${parsedDate}:${parsedTime}:${location}:${teamA}:${teamB}`;
+      newMatchSignatures.add(matchSignature);
+
+      if (result) {
+        console.log("Match updated:", query);
+      } else {
+        console.log("New match created:", query);
+      }
+    }
+
+    // Find matches in the database that are not present in the CSV file
+    const existingMatches = await Match.find(
+      {},
+      { _id: 0, date: 1, time: 1, location: 1, teamA: 1, teamB: 1 }
+    );
+    for (const match of existingMatches) {
+      const matchSignature = `${match.date}:${match.time}:${match.location}:${match.teamA}:${match.teamB}`;
+      if (!newMatchSignatures.has(matchSignature)) {
+        // Delete the match from the database
+        await Match.deleteOne({
+          date: match.date,
+          time: match.time,
+          location: match.location,
+          teamA: match.teamA,
+          teamB: match.teamB,
+        });
+        console.log("Match deleted:", match);
+      }
+    }
+  } catch (error) {
+    console.error("Error processing CSV file:", error);
+  }
+}
+
+const path = require("path");
+
+function watchCSVFiles() {
+  const directoryPath = "uploads"; // Assuming the folder name is 'uploads'
+  let timeout; // Declare the timeout variable
+
+  fs.watch(directoryPath, { persistent: true }, (eventType, filename) => {
+    if (filename) {
+      console.log(`File ${filename} has been changed`);
+
+      // If a timeout is already set, clear it
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+
+      // Set a new timeout to debounce the processing function
+      timeout = setTimeout(() => {
+        try {
+          processCSVFile(path.join(directoryPath, filename));
+        } catch (error) {
+          console.error("Error processing CSV file:", error);
+        }
+      }, 1000); // Adjust the debounce delay as needed (e.g., 1000 ms)
+    }
+  });
+}
+
+exports.watchCSVFiles = watchCSVFiles;
+exports.processCSVFile = processCSVFile;
+exports.scrapeMatches = scrapeMatches;
