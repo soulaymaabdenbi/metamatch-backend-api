@@ -82,6 +82,6 @@ app.use("/test", (req, res) => {
   }
   return res.status(200).json({ status: true, password });
 });
-app.listen(process.env.PORT || 3000, () =>
+app.listen(process.env.PORT || 5000, () =>
   console.log(`app listen on port ${process.env.PORT}!`)
 );
