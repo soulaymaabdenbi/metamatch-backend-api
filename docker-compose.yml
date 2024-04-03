@@ -23,6 +23,6 @@ services:
     volumes:
       - type: volume
         source: mongo-data
-        target: /path/in/container
+
 volumes:
   mongo-data:
