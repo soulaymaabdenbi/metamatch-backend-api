@@ -33,6 +33,7 @@
     "nodemon": "^3.0.3",
     "pdf-parse": "^1.1.1",
     "pdf2json": "^3.0.5",
-    "pdfreader": "^3.0.2"
+    "pdfreader": "^3.0.2",
+    "wait-for": "^2.1.1"
   }
 }
