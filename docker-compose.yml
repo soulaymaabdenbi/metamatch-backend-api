@@ -20,9 +20,6 @@ services:
       - "5000:5000"
     depends_on:
       - db
-    volumes:
-      - type: volume
-        source: mongo-data
 
 volumes:
   mongo-data:
