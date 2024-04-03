@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js",
+    "start": "node server.js",
+    "build": "npm run build-dev",
     "test": "jest",
-    "build-dev": "nodemon server.js"
+    "build-dev": "echo 'No build step required for development environment'"
   },
   "keywords": [],
   "author": "",
