@@ -35,9 +35,12 @@ exports.addSession = async (req, res) => {
 
 // exports.updateSession = async (req, res) => {
 //   const { id } = req.params;
-//   const { date, time, location, topics } = req.body;
+//   const { date } = req.body;
 //   try {
-//     const existingSession = await Session.findOne({ date: date });
+//     const existingSession = await Session.findOne({
+//       date: date,
+//       _id: { $ne: id },
+//     });
 
 //     if (existingSession) {
 //       return res.status(400).json({
@@ -45,18 +48,27 @@ exports.addSession = async (req, res) => {
 //       });
 //     }
 
-//     const updatedSession = await Session.findByIdAndUpdate(
-//       id,
-//       { date, time, location, topics },
-//       { new: true }
-//     );
+//     const updatedSession = await Session.findByIdAndUpdate(id, req.body, {
+//       new: true,
+//     });
 //     if (!updatedSession) {
 //       return res.status(404).json({ error: "Session not found" });
 //     }
-//     res.json(updatedSession);
+
+//     // Ensure res object exists before calling methods on it
+//     if (res) {
+//       res.json(updatedSession);
+//     } else {
+//       console.error("Response object is undefined");
+//     }
 //   } catch (error) {
 //     console.log("Error updating session:", error);
-//     res.status(400).json({ error: error.message });
+//     // Ensure res object exists before calling methods on it
+//     if (res) {
+//       res.status(400).json({ error: error.message });
+//     } else {
+//       console.error("Response object is undefined");
+//     }
 //   }
 // };
 
