@@ -1,5 +1,5 @@
 const Match = require("../models/Match");
-const PDFParser = require("pdf-parse");
+
 const csvParser = require("csv-parser");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
@@ -7,11 +7,13 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const csv = require("csv-parser");
 const mongoose = require("mongoose");
-const fs = require("fs").promises;
+//const fs = require("fs").promises;
+const fs = require("fs");
+
+const chokidar = require("chokidar");
 
 const moment = require("moment");
 
-// Controller function to fetch all matches
 exports.getAllMatches = async (req, res) => {
   try {
     const matches = await Match.find();
@@ -21,7 +23,6 @@ exports.getAllMatches = async (req, res) => {
   }
 };
 
-// Controller function to create a new match
 exports.addMatch = async (req, res) => {
   const { date } = req.body;
   try {
@@ -31,6 +32,7 @@ exports.addMatch = async (req, res) => {
         message: "A match is already scheduled on the same date",
       });
     }
+
     const match = new Match(req.body);
     const newMatch = await match.save();
     res.status(201).json(newMatch);
@@ -39,23 +41,36 @@ exports.addMatch = async (req, res) => {
   }
 };
 
-// Controller function to update a match by ID
 exports.updateMatch = async (req, res) => {
   const { id } = req.params;
+  const { date } = req.body;
+
   try {
+    const existingMatch = await Match.findOne({
+      date,
+      _id: { $ne: id },
+    });
+
+    if (existingMatch) {
+      return res.status(400).json({
+        message: "Conflict",
+      });
+    }
+
     const updatedMatch = await Match.findByIdAndUpdate(id, req.body, {
       new: true,
     });
+
     if (!updatedMatch) {
       return res.status(404).json({ message: "Match not found" });
     }
+
     res.json(updatedMatch);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Controller function to delete a match by ID
 exports.deleteMatch = async (req, res) => {
   const { id } = req.params;
   try {
@@ -69,7 +84,6 @@ exports.deleteMatch = async (req, res) => {
   }
 };
 
-// Controller function to get a match by ID
 exports.getMatchById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -83,7 +97,6 @@ exports.getMatchById = async (req, res) => {
   }
 };
 
-// Controller function to get matches by date
 exports.getByDate = async (req, res) => {
   const { date } = req.params;
   try {
@@ -101,31 +114,12 @@ exports.getByDate = async (req, res) => {
 
 const url =
   "https://www.transfermarkt.com/ligue-professionelle-1-playoff/startseite/wettbewerb/TUNM";
-const urlArticle = "https://www.transfermarkt.com/interview/rubrik/aktuell/1";
-const matchData = {};
-const articleData = {};
 
 async function getHtml() {
   try {
     const response = await axios.get(url, {
       headers: {
         "User-Agent": generateRandomUserAgent(),
-        // Add other headers if necessary
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching HTML:", error);
-    throw error;
-  }
-}
-
-async function getHtmll() {
-  try {
-    const response = await axios.get(urlArticle, {
-      headers: {
-        "User-Agent": generateRandomUserAgent(),
-        // Add other headers if necessary
       },
     });
     return response.data;
@@ -138,87 +132,15 @@ async function getHtmll() {
 function generateRandomUserAgent() {
   const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-    // Add more User-Agent strings as needed
   ];
   return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
-// async function scrapeMatches() {
-//   try {
-//     const html = await getHtml();
-//     const $ = cheerio.load(html);
-
-//     // Initialize matchData as an empty array
-//     const matchData = [];
-
-//     $(".begegnungZeile").each((i, match) => {
-//       const dateAndTime = $(match)
-//         .find(".hide-for-small.zeit.al")
-//         .text()
-//         .trim();
-//       const homeTeamName = $(match)
-//         .find(".verein-heim .vereinsname a")
-//         .text()
-//         .trim();
-//       const awayTeamName = $(match)
-//         .find(".verein-gast .vereinsname a")
-//         .text()
-//         .trim();
-//       const matchResult = $(match).find(".ergebnis .matchresult").text().trim();
-
-//       const matchDataItem = {
-//         dateAndTime,
-//         homeTeamName,
-//         awayTeamName,
-//         matchResult,
-//       };
-//       matchData.push(matchDataItem);
-//     });
-
-//     // Save match data to a file
-//     await saveMatchData(matchData);
-
-//     console.log("Match data saved successfully.");
-//   } catch (error) {
-//     console.error("Error scraping matches:", error);
-//     throw error;
-//   }
-// }
-
-// async function saveMatchData(matchData) {
-//   try {
-//     await fs.writeFile("matchData.json", JSON.stringify(matchData, null, 2));
-//   } catch (error) {
-//     console.error("Error saving match data:", error);
-//     throw error;
-//   }
-// }
-
-// // Function to add delay between requests
-// function delay(ms) {
-//   return new Promise((resolve) => setTimeout(resolve, ms));
-// }
-
-// exports.startScraping = async () => {
-//   try {
-//     while (true) {
-//       await scrapeMatches(); // Perform the scraping operation
-
-//       // Add a delay between scraping requests (e.g., 5 seconds)
-//       await delay(5000); // Delay for 5 seconds before making the next request
-//     }
-//   } catch (error) {
-//     console.error("Error during scraping:", error);
-//     // If an error occurs, log it and continue scraping
-//     // You may want to implement more sophisticated error handling based on your requirements
-//   }
-// };
 async function scrapeMatches() {
   try {
     const html = await getHtml();
     const $ = cheerio.load(html);
 
-    // Initialize matchData as an empty array
     const matchData = [];
 
     $(".begegnungZeile").each((i, match) => {
@@ -245,7 +167,6 @@ async function scrapeMatches() {
       matchData.push(matchDataItem);
     });
 
-    // Save match data to a file
     await saveMatchData(matchData);
 
     console.log("Match data saved successfully.");
@@ -256,140 +177,242 @@ async function scrapeMatches() {
 }
 
 async function saveMatchData(matchData) {
+  let lastKnownDate = "";
+  matchData.forEach((match) => {
+    if (match.dateAndTime.trim()) {
+      lastKnownDate = match.dateAndTime;
+    } else if (lastKnownDate) {
+      match.dateAndTime = lastKnownDate;
+    }
+  });
+
   try {
-    await fs.writeFile("matchData.json", JSON.stringify(matchData, null, 2));
+    await fs.promises.writeFile(
+      "matchData.json",
+      JSON.stringify(matchData, null, 2),
+      (err) => {
+        if (err) {
+          console.error("Error saving match data:", err);
+          throw err;
+        }
+        console.log(
+          "Match data saved successfully, with missing dates filled in."
+        );
+      }
+    );
   } catch (error) {
     console.error("Error saving match data:", error);
     throw error;
   }
 }
 
-// Function to add delay between requests
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-exports.startScraping = async () => {
+exports.uploadCSV = async (req, res) => {
   try {
-    while (true) {
-      await scrapeMatches(); // Perform the scraping operation
-
-      // Add a delay between scraping requests (e.g., 5 seconds)
-      await delay(5000); // Delay for 5 seconds before making the next request
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
     }
+
+    const fileContent = fs.readFileSync(req.file.path, "utf-8");
+
+    const rows = fileContent
+      .trim()
+      .split("\n")
+      .map((row) => row.split(";").map((col) => col.trim()));
+
+    if (rows.length > 1) {
+      rows.shift(); // Remove header row
+    }
+
+    for (const row of rows) {
+      const [date, time, location, teamA, teamB] = row;
+
+      console.log("Parsing row:", row);
+
+      const parsedDate = moment(date, "DD/MM/YYYY").toDate();
+      const parsedTime = moment(time, "HH:mm").format("HH:mm");
+
+      console.log("Parsed date:", parsedDate);
+      console.log("Parsed time:", parsedTime);
+      console.log("Location:", location);
+      console.log("Team A:", teamA);
+      console.log("Team B:", teamB);
+
+      if (!parsedDate || isNaN(parsedDate.getTime()) || !parsedTime) {
+        console.error("Invalid match data in row:", row);
+        continue;
+      }
+
+      const existingMatch = await Match.findOne({
+        date: parsedDate,
+        time: parsedTime,
+        location,
+        teamA,
+        teamB,
+      });
+
+      if (existingMatch) {
+        await Match.findOneAndUpdate(
+          {
+            date: parsedDate,
+            time: parsedTime,
+            location,
+            teamA,
+            teamB,
+          },
+          {
+            $set: {
+              date: parsedDate,
+              time: parsedTime,
+              location,
+              teamA,
+              teamB,
+            },
+          }
+        );
+        console.log("Match updated:", row.join(","));
+      } else {
+        await Match.create({
+          date: parsedDate,
+          time: parsedTime,
+          location,
+          teamA,
+          teamB,
+        });
+        console.log("New match created:", row.join(","));
+      }
+    }
+
+    res.json({
+      message: "CSV file uploaded and match data inserted/updated successfully",
+    });
   } catch (error) {
-    console.error("Error during scraping:", error);
-    // If an error occurs, log it and continue scraping
-    // You may want to implement more sophisticated error handling based on your requirements
+    console.error("Error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-// async function scrapeArticles() {
-//   try {
-//     const html = await getHtmll();
-//     const $ = cheerio.load(html);
-
-//     // Initialize matchData as an empty array
-//     const articleData = [];
-
-//     $(".newsticker__box-big").each((index, element) => {
-//       const publicationDate = $(element)
-//         .find(".newsticker__boxheader-big")
-//         .text()
-//         .trim();
-//       const headline = $(element)
-//         .find(".newsticker__headline-big")
-//         .text()
-//         .trim();
-//       const teaserText = $(element)
-//         .find(".newsticker__teasertext")
-//         .text()
-//         .trim();
-
-//       const article = {
-//         publicationDate,
-//         headline,
-//         teaserText,
-//       };
-//       articleData.push(article);
-//     });
-
-//     await saveArticles(articleData);
-
-//     console.log("article data saved successfully.");
-//   } catch (error) {
-//     console.error("Error scraping articles:", error);
-//     throw error;
-//   }
-// }
-async function saveArticles(articles) {
+async function processCSVFile(filePath) {
   try {
-    await fs.writeFile("articleData.json", JSON.stringify(articles, null, 2));
-  } catch (error) {
-    console.error("Error saving articles:", error);
-    throw error;
-  }
-}
+    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const rows = fileContent
+      .trim()
+      .split("\n")
+      .map((row) => row.split(";").map((col) => col.trim()));
 
-//zouz tsawer kifkif
-// async function scrapeArticles() {
-//   try {
-//     const html = await getHtmll();
-//     const $ = cheerio.load(html);
+    // Skip the header row
+    if (rows.length > 0) {
+      rows.shift(); // Remove the first element (header row)
+    }
 
-//     // Initialize articleData as an empty array
-//     const articleData = [];
+    const newMatchSignatures = new Set();
 
-//     $(".newsticker__box-big").each((index, element) => {
-//       const publicationDate = $(element)
-//         .find(".newsticker__boxheader-big")
-//         .text()
-//         .trim();
-//       const headline = $(element)
-//         .find(".newsticker__headline-big")
-//         .text()
-//         .trim();
-//       const teaserText = $(element)
-//         .find(".newsticker__teasertext")
-//         .text()
-//         .trim();
-//       // Extract image URL
-//       const imageElement = $(".foto");
-//       const imageUrl = imageElement.attr("src");
+    for (const row of rows) {
+      const [date, time, location, teamA, teamB] = row;
 
-//       const article = {
-//         publicationDate,
-//         headline,
-//         teaserText,
-//         imageUrl, // Add imageUrl to the article object
-//       };
-//       articleData.push(article);
-//     });
+      const parsedDate = moment(date, "DD/MM/YYYY").toDate();
+      const parsedTime = moment(time, "HH:mm").format("HH:mm");
 
-//     await saveArticles(articleData);
+      if (
+        !parsedDate ||
+        isNaN(parsedDate.getTime()) ||
+        !parsedTime ||
+        !location ||
+        !teamA ||
+        !teamB
+      ) {
+        console.error("Invalid match data in row:", row);
+        continue;
+      }
 
-//     console.log("Article data saved successfully.");
-//   } catch (error) {
-//     console.error("Error scraping articles:", error);
-//     throw error;
-//   }
-// }
+      // Query to find existing match
+      const query = {
+        date: parsedDate,
+        time: parsedTime,
+        location,
+        teamA,
+        teamB,
+      };
 
-// Function to add delay between requests
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-exports.startScrapingArticles = async () => {
-  try {
-    while (true) {
-      await scrapeArticles(); // Perform the scraping operation
+      // Update data for the existing match
+      const update = {
+        date: parsedDate,
+        time: parsedTime,
+        location,
+        teamA,
+        teamB,
+      };
 
-      // Add a delay between scraping requests (e.g., 5 seconds)
-      await delay(5000); // Delay for 5 seconds before making the next request
+      // Find and update the existing match
+      const result = await Match.findOneAndUpdate(query, update, {
+        upsert: true,
+      });
+
+      // Add match signature to the set
+      const matchSignature = `${parsedDate}:${parsedTime}:${location}:${teamA}:${teamB}`;
+      newMatchSignatures.add(matchSignature);
+
+      if (result) {
+        console.log("Match updated:", query);
+      } else {
+        console.log("New match created:", query);
+      }
+    }
+
+    // Find matches in the database that are not present in the CSV file
+    const existingMatches = await Match.find(
+      {},
+      { _id: 0, date: 1, time: 1, location: 1, teamA: 1, teamB: 1 }
+    );
+    for (const match of existingMatches) {
+      const matchSignature = `${match.date}:${match.time}:${match.location}:${match.teamA}:${match.teamB}`;
+      if (!newMatchSignatures.has(matchSignature)) {
+        // Delete the match from the database
+        await Match.deleteOne({
+          date: match.date,
+          time: match.time,
+          location: match.location,
+          teamA: match.teamA,
+          teamB: match.teamB,
+        });
+        console.log("Match deleted:", match);
+      }
     }
   } catch (error) {
-    console.error("Error during scraping:", error);
-    // If an error occurs, log it and continue scraping
-    // You may want to implement more sophisticated error handling based on your requirements
+    console.error("Error processing CSV file:", error);
   }
-};
+}
+
+const path = require("path");
+
+function watchCSVFiles() {
+  const directoryPath = "uploads"; // Assuming the folder name is 'uploads'
+  let timeout; // Declare the timeout variable
+
+  fs.watch(directoryPath, { persistent: true }, (eventType, filename) => {
+    if (filename) {
+      console.log(`File ${filename} has been changed`);
+
+      // If a timeout is already set, clear it
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+
+      // Set a new timeout to debounce the processing function
+      timeout = setTimeout(() => {
+        try {
+          processCSVFile(path.join(directoryPath, filename));
+        } catch (error) {
+          console.error("Error processing CSV file:", error);
+        }
+      }, 1000); // Adjust the debounce delay as needed (e.g., 1000 ms)
+    }
+  });
+}
+
+exports.watchCSVFiles = watchCSVFiles;
+exports.processCSVFile = processCSVFile;
+exports.scrapeMatches = scrapeMatches;

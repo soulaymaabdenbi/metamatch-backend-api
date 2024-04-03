@@ -2,8 +2,9 @@ const mongo = require("mongoose");
 const Schema = mongo.Schema;
 
 const Match = new Schema({
-  //_id: String,
+  //_id: mongo.Schema.Types.ObjectId,
   date: Date,
+  time: String,
   location: String,
   teamA: String,
   teamB: String,

@@ -11,12 +11,12 @@ exports.addSession = async (req, res) => {
   }
 
   try {
-    const existingSession = await Session.findOne({ date: date, time: time });
+    const existingSession = await Session.findOne({ date: date });
 
     if (existingSession) {
-      return res
-        .status(409)
-        .json({ error: "Conflict: A session already exists at this time." });
+      return res.status(409).json({
+        error: "Conflict: A session already exists at this date and time.",
+      });
     }
 
     const newSession = await Session.create({
@@ -33,15 +33,63 @@ exports.addSession = async (req, res) => {
   }
 };
 
+// exports.updateSession = async (req, res) => {
+//   const { id } = req.params;
+//   const { date } = req.body;
+//   try {
+//     const existingSession = await Session.findOne({
+//       date: date,
+//       _id: { $ne: id },
+//     });
+
+//     if (existingSession) {
+//       return res.status(400).json({
+//         message: "Conflict",
+//       });
+//     }
+
+//     const updatedSession = await Session.findByIdAndUpdate(id, req.body, {
+//       new: true,
+//     });
+//     if (!updatedSession) {
+//       return res.status(404).json({ error: "Session not found" });
+//     }
+
+//     // Ensure res object exists before calling methods on it
+//     if (res) {
+//       res.json(updatedSession);
+//     } else {
+//       console.error("Response object is undefined");
+//     }
+//   } catch (error) {
+//     console.log("Error updating session:", error);
+//     // Ensure res object exists before calling methods on it
+//     if (res) {
+//       res.status(400).json({ error: error.message });
+//     } else {
+//       console.error("Response object is undefined");
+//     }
+//   }
+// };
+
 exports.updateSession = async (req, res) => {
   const { id } = req.params;
-  const { date, time, location, topics } = req.body;
+  const { date } = req.body;
   try {
-    const updatedSession = await Session.findByIdAndUpdate(
-      id,
-      { date, time, location, topics },
-      { new: true }
-    );
+    const existingSession = await Session.findOne({
+      date: date,
+      _id: { $ne: id },
+    });
+
+    if (existingSession) {
+      return res.status(400).json({
+        message: "Conflict",
+      });
+    }
+
+    const updatedSession = await Session.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
     if (!updatedSession) {
       return res.status(404).json({ error: "Session not found" });
     }
@@ -99,18 +147,53 @@ exports.getAllSessions = async (req, res) => {
 
 function calculateSessionsPerWeek(sessions) {
   const sessionsPerWeek = {};
-  sessions.forEach((session) => {
-    const weekStart = moment(session.date).startOf("isoWeek");
-    const weekEnd = moment(session.date).endOf("isoWeek");
-    const week = `${weekStart.format("YYYY-MM-DD")} to ${weekEnd.format(
-      "YYYY-MM-DD"
-    )}`;
 
-    if (!sessionsPerWeek[week]) {
-      sessionsPerWeek[week] = 1;
+  sessions.forEach((session) => {
+    const weekNumber = moment(session.date).isoWeek();
+    if (!sessionsPerWeek[weekNumber]) {
+      sessionsPerWeek[weekNumber] = 1;
     } else {
-      sessionsPerWeek[week]++;
+      sessionsPerWeek[weekNumber]++;
     }
   });
+
   return sessionsPerWeek;
+}
+
+exports.getAllSessionsForMonth = async (req, res) => {
+  const { month } = req.query;
+
+  try {
+    const sessions = await Session.find();
+
+    // Filter sessions for the specified month
+    const sessionsForMonth = sessions.filter((session) => {
+      return moment(session.date).month() === parseInt(month) - 1; // Subtract 1 from month because moment.js months are zero-indexed
+    });
+
+    // Calculate sessions per week for the filtered sessions
+    const sessionsPerMonth = calculateSessionsPerMonth(
+      sessionsForMonth,
+      parseInt(month)
+    );
+
+    res.json({ sessionsPerMonth });
+  } catch (error) {
+    console.error("Error fetching sessions:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+function calculateSessionsPerMonth(sessions, month) {
+  let totalSessions = 0;
+
+  sessions.forEach((session) => {
+    // Check if the session's month matches the specified month
+    if (moment(session.date).month() === month - 1) {
+      // Subtract 1 from month because moment.js months are zero-indexed
+      totalSessions++;
+    }
+  });
+
+  return totalSessions;
 }

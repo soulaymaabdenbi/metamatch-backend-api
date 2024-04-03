@@ -2,14 +2,14 @@ const Forum = require("../models/Forum");
 
 exports.createForumPost = async (req, res) => {
   try {
-    const newForum = new Forum(req.body); // Corrected variable name
-    const savedForum = await newForum.save(); // Corrected variable name
+    const newForum = new Forum(req.body);
+    const savedForum = await newForum.save();
     res.status(201).json(savedForum);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
-// Get all forum posts
+
 exports.getAllForumPosts = async (req, res) => {
   try {
     const forumPosts = await Forum.find().sort({ createdAt: -1 });
@@ -19,7 +19,6 @@ exports.getAllForumPosts = async (req, res) => {
   }
 };
 
-// Get a single forum post
 exports.getForumPost = async (req, res) => {
   try {
     const forumPost = await Forum.findById(req.params.id);
@@ -32,7 +31,6 @@ exports.getForumPost = async (req, res) => {
   }
 };
 
-// Update a forum post
 exports.updateForumPost = async (req, res) => {
   try {
     const updatedForumPost = await Forum.findByIdAndUpdate(
@@ -49,7 +47,6 @@ exports.updateForumPost = async (req, res) => {
   }
 };
 
-// Delete a forum post
 exports.deleteForumPost = async (req, res) => {
   try {
     const deletedForumPost = await Forum.findByIdAndDelete(req.params.id);
